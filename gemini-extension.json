@@ -4,8 +4,10 @@
     "version": "0.1.0",
     "contextFileName": "AGENTS.md",
     "mcpServers": {
-        "huggingface-skills": {
-            "httpUrl": "https://huggingface.co/mcp?login"
+        "huggingfaceskills": {
+            "httpUrl": "https://huggingface.co/mcp?bouquet=skills",
+            "description": "Hugging Face MCP Server",
+            "headers": {"Authorization": "Bearer $HF_TOKEN"}
         }
     }
 }
