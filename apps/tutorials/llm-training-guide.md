@@ -146,6 +146,8 @@ Estimated cost: ~$0.30
 View real-time metrics at: https://huggingface.co/spaces/username/trackio
 ```
 
+![Example Trackio dashboard of a Sweep test](sweep_example.png)
+
 The skill includes Trackio integration, so you can watch training loss decrease in real-time. Jobs run asynchronously so you can close your terminal and come back later. When you want an update:
 
 ```
