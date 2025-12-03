@@ -95,8 +95,8 @@ hf auth login
 export HF_TOKEN=hf_your_write_access_token_here
 ```
 
-> [!WARNING]
-> The Jobs environment is **ephemeral**. When a job ends, all local files are deleted. If your model isn't pushed to the Hub, **all training is lost**. The skill always configures Hub saving, but double-check that your token has write permissions.
+> ![NOTE] 
+> Configure Hugging Face MCP Server to use your write token by sending it in either the `HF_TOKEN` or `Authorization: Bearer` HTTP Headers. 
 
 ## Your First Training Run
 
@@ -107,23 +107,26 @@ Let's walk through a complete example. We'll fine-tune a small model to see the 
 Start with a simple and clear instruction to fine tune a specific model
 
 ```
-Fine-tune Qwen3-0.6B on the trl-lib/Capybara dataset for instruction following. 
+Fine-tune Qwen3-0.6B on the open-r1/codeforces-cots dataset for instruction following. 
 ```
 
 The coding agent analyzes your request and prepares a training configuration. For a 0.6B model on a demo dataset, it selects `t4-small`—enough GPU for this model size and the cheapest option available.
+
+>[!NOTE]
+> The `open-r1/codeforces-cots` dataset is a dataset of codeforces problems and solutions. It is a good dataset for instruction tuning a model to solve hard coding problems.
 
 ### Review Before Submitting
 
 Before your coding agent submits anything, you'll see the configuration:
 
 ```
-I'll fine-tune Qwen/Qwen3-0.6B on trl-lib/Capybara using SFT.
+I'll fine-tune Qwen/Qwen3-0.6B on open-r1/codeforces-cots using SFT.
 
 Configuration:
 - Hardware: t4-small (~$0.75/hour)
 - Estimated time: ~20 minutes
 - Estimated cost: ~$0.30
-- Output: username/qwen-capybara-sft
+- Output: username/qwen-codeforces-cots-sft
 
 The model will be pushed to Hub automatically. Should I submit?
 ```
@@ -163,8 +166,8 @@ When training completes, your model is on the Hub:
 ```python
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-model = AutoModelForCausalLM.from_pretrained("username/qwen-capybara-sft")
-tokenizer = AutoTokenizer.from_pretrained("username/qwen-capybara-sft")
+model = AutoModelForCausalLM.from_pretrained("username/qwen-codeforces-cots-sft")
+tokenizer = AutoTokenizer.from_pretrained("username/qwen-codeforces-cots-sft")
 ```
 
 That's the full loop. You described what you wanted in plain English, and the agent handled GPU selection, script generation, job submission, authentication, and persistence. The whole thing cost about thirty cents.
