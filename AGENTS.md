@@ -11,7 +11,6 @@ These skills are:
 IMPORTANT: You MUST read the SKILL.md file whenever the description of the skills matches the user intent, or may help accomplish their task. 
 
 <available_skills>
-
 hugging-face-dataset-creator: `Create and manage datasets on Hugging Face Hub. Supports initializing repos, defining configs/system prompts, and streaming row updates. Designed to work alongside HF MCP server for comprehensive dataset workflows.`
 hugging-face-evaluation-manager: `Add and manage evaluation results in Hugging Face model cards. Supports extracting eval tables from README content and importing scores from Artificial Analysis API. Works with the model-index metadata format.`
 hugging-face-paper-publisher: `Publish and manage research papers on Hugging Face Hub. Supports creating paper pages, linking papers to models/datasets, claiming authorship, and generating professional markdown-based research articles.`
@@ -19,5 +18,23 @@ model-trainer: `This skill should be used when users want to train or fine-tune 
 </available_skills>
 
 Paths referenced within SKILL folders are relative to that SKILL. For example the hf_dataset_creator `scripts/example.py` would be referenced as `hf_dataset_creator/scripts/example.py`. 
+
+Use the following paths to reference the scripts and references within the SKILL folders.
+
+<skill_scripts>
+model-trainer: `hf-llm-trainer/skills/model-trainer/scripts/`
+hugging-face-dataset-creator: `hf_dataset_creator/skills/hugging-face-dataset-creator/scripts/`
+hugging-face-evaluation-manager: `hf_model_evaluation/skills/hugging-face-evaluation-manager/scripts/`
+hugging-face-paper-publisher: `hf-paper-publisher/skills/hugging-face-paper-publisher/scripts/`
+</skill_scripts>
+
+Use the following paths as guides to references within the SKILL folders.
+
+<skill_references>
+model-trainer: `hf-llm-trainer/skills/model-trainer/references/`
+hugging-face-dataset-creator: `hf_dataset_creator/skills/hugging-face-dataset-creator/references/`
+hugging-face-evaluation-manager: `hf_model_evaluation/skills/hugging-face-evaluation-manager/examples/`
+hugging-face-paper-publisher: `hf-paper-publisher/skills/hugging-face-paper-publisher/references/`
+</skill_references>
 
 </skills>
