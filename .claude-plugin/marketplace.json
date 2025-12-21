@@ -27,6 +27,11 @@
       "name": "hugging-face-evaluation-manager",
       "source": "./hf_model_evaluation",
       "description": "Add and manage evaluation results in Hugging Face model cards. Supports extracting eval tables from README content and importing scores from Artificial Analysis API. Works with the model-index metadata format."
-    }
+    },
+    {
+      "name": "hf-tool-builder",
+      "source": "./hf-tool-builder",
+      "description": "Use this skill when the user wants to build tool/scripts or achieve a task where using data from the Hugging Face API would help. This is especially useful when chaining or combining API calls or the task will be repeated/automated. This Skill creates a reusable script to fetch, enrich or process data."
+    }    
   ]
 }

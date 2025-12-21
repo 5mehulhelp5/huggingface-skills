@@ -1,0 +1,14 @@
+{
+  "name": "hf-tool-builder",
+  "version": "1.0.0",
+  "description": "Use this skill when the user wants to build tool/scripts or achieve a task where using data from the Hugging Face API would help. This is especially useful when chaining or combining API calls or the task will be repeated/automated. This Skill creates a reusable script to fetch, enrich or process data.",
+  "author": {
+    "name": "Hugging Face"
+  },
+  "repository": "https://github.com/huggingface/skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "huggingface",
+    "api"
+  ]
+}
