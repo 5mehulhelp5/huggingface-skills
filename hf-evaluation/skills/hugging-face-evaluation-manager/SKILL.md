@@ -215,7 +215,7 @@ Submit an evaluation job on Hugging Face infrastructure using the `hf jobs uv ru
 **Direct CLI Usage:**
 ```bash
 HF_TOKEN=$HF_TOKEN \
-hf jobs uv run hf_model_evaluation/scripts/inspect_eval_uv.py \
+hf jobs uv run hf-evaluation/scripts/inspect_eval_uv.py \
   --flavor cpu-basic \
   --secret HF_TOKEN=$HF_TOKEN \
   -- --model "meta-llama/Llama-2-7b-hf" \
@@ -225,7 +225,7 @@ hf jobs uv run hf_model_evaluation/scripts/inspect_eval_uv.py \
 **GPU Example (A10G):**
 ```bash
 HF_TOKEN=$HF_TOKEN \
-hf jobs uv run hf_model_evaluation/scripts/inspect_eval_uv.py \
+hf jobs uv run hf-evaluation/scripts/inspect_eval_uv.py \
   --flavor a10g-small \
   --secret HF_TOKEN=$HF_TOKEN \
   -- --model "meta-llama/Llama-2-7b-hf" \
