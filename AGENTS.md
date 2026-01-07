@@ -7,7 +7,7 @@ These skills are:
  - hugging-face-dataset-creator -> "hf-datasets/skills/hugging-face-dataset-creator/SKILL.md"
  - hugging-face-evaluation-manager -> "hf-evaluation/skills/hugging-face-evaluation-manager/SKILL.md"
  - hugging-face-paper-publisher -> "hf-papers/skills/hugging-face-paper-publisher/SKILL.md"
- - model-trainer -> "hf-llm-trainer/skills/model-trainer/SKILL.md"
+ - model-trainer -> "hf-trainer/skills/model-trainer/SKILL.md"
 
 IMPORTANT: You MUST read the SKILL.md file whenever the description of the skills matches the user intent, or may help accomplish their task. 
 

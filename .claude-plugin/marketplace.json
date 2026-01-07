@@ -32,6 +32,11 @@
       "name": "hf-tool-builder",
       "source": "./hf-tool-builder",
       "description": "Use this skill when the user wants to build tool/scripts or achieve a task where using data from the Hugging Face API would help. This is especially useful when chaining or combining API calls or the task will be repeated/automated. This Skill creates a reusable script to fetch, enrich or process data."
+    },
+    {
+      "name": "hf-cli",
+      "source": "./hf-cli",
+      "description": "Execute Hugging Face Hub operations using the `hf` CLI. Use when the user needs to download models/datasets/spaces, upload files to Hub repositories, create repos, manage local cache, run compute jobs on HF infrastructure, or manage inference endpoints. Covers authentication, file transfers, repository management, cache operations, and cloud compute."
     }
   ]
 }
