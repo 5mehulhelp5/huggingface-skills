@@ -40,6 +40,7 @@ AgentCards can be hot-loaded as Tools for the current Agent by the User with the
 ### Frontmatter
 
 A typical frontmatter looks like this:
+
 ```yaml
 ---
 name: agent_name # name for the agent - if not supplied the filename is used (preferred).
@@ -80,17 +81,17 @@ Here is a short reference of the main configuration options. Don't specify a val
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `messages` | string/list | - | Path(s) to history file(s) for preloading conversation turns. Can also be specified in frontmatter body (see "Message Session Structure" below |
+| `messages` | string/list | - | Path(s) to history file(s) for preloading conversation turns. Use the `./messages/` subdirectory to avoid confusion with AgentCards. **NOTE** Argument is *relative* to the agent-cards directory |
 
 ### Advanced
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `function_tools` | list | [] | Python functions as tools: `["module.py:function_name"]`. (See note below) |
-| `request_params` | dict | {} | Model request parameters (e.g., `{temperature: 0.7}`). Prefer defaults unless User requests specific settings.  |
+| `request_params` | dict | {} | Model request parameters (e.g., `{temperature: 0.7}`). Use defaults (DO NOT SPECIFY) unless the User requests specific settings.  |
 
 
-### Body / Message Session Structure
+### Body
 
 The optional markdown body following the frontmatter defines the agent's system prompt. If not specifed, the default is used.
 
@@ -151,8 +152,7 @@ System Prompts can be supplied either by:
 
 Message History can be loaded from a markdown file:
 
-- If the first non‑empty line is not a delimiter, the whole file is treated as a single user
-  message (simple mode).
+- If the first non‑empty line is not a delimiter, the whole file is treated as a single user message (simple mode).
 - Otherwise, messages are delimited by exact, case‑sensitive markers on their own line:
     - ---USER
     - ---ASSISTANT
@@ -178,7 +178,7 @@ How to use it in an AgentCard:
 ```
 ---
 name: my_agent
-messages: ./history.md
+messages: ./message/history.md
 ---
 (Optional system prompt here)
 ```
