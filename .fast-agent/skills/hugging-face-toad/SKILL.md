@@ -1,17 +1,22 @@
 ---
 name: hugging-face-toad
-description: Agent Builder for use with Hugging Face Inference Providers, Tools and MCP Servers. Describes how to configure and deploy context efficient agents in this environment, and how to manage them and keep them up-to-date. Combine with hugging-face-tool-builder to build reusable Agents.
+description: Agent Builder to build customised powerful agents to help Users with their tasks. Use to build and configure agents in this environment - for tasks including search, analysis and general tasks. Can be combined with the hugging-face-tool-builder to create powerful HF Specific integrations.
 ---
 
 # Agent Builder
 
-Agents are described in markdown files known as AgentCard. 
+The purpose of this skill is to create one or more AgentCards that will be installed in this environment to help the User achieve their goals.
 
-This skill is useful for:
+AgentCards are markdown files with a simple YAML frontmatter that describe Agents. Good agents:
+ - Goal focussed - will direct themselves using tools and available information to reach a goal.
+ - Simple - but use all available tools and techniques to produce high quality outputs. 
+ - Flexible - Able to adapt to unexpected circumstances to achieve the outcome.
+
+This skill is describes how to:
  - Customising Agents for Users to interact with
  - Creating context-efficient sub-agents (as Tools) for Agents to use when completing higher level tasks.
 
-AgentCards contain a YAML frontmatter to configure the agent, optionally followed by System Prompt. AgentCards support preloading of User/Assistant conversation in to the Agents context for in-context learning/few-shot prompting, or providing a starting point for future conversation turns.
+AgentCards support preloading of User/Assistant conversation in to the Agents context for in-context learning/few-shot prompting, or providing a starting point for future User/Agent conversation turns.
 
 Examples include but are not limited to:
  - Creating "experts" that have direct access to information from URLs or specific areas of the filesystem.
@@ -22,11 +27,11 @@ Examples include but are not limited to:
 
 ### On Startup
 
-AgentCards placed in the `.fast-agent/agent-cards` directory are automatically loaded on startup, and are accessible to the User. 
+AgentCards placed in the `.fast-agent/agent-cards` directory are automatically loaded on startup, and are accessible to the User. This is the simplest approach to install a new AgentCard.
 
 AgentCards placed in the `.fast-agent/tool-cards` directory are loaded as Tools for the default agent.
 
-**CRITICAL** In the Toad environment, the application must be restarted before new or modified Agents are visible to the User. The User can use `ctrl+o` to "change mode" and see the available agents.
+**CRITICAL** In the `Toad` client environment, the application must be restarted before new or modified Agents are visible to the User. The User can use `ctrl+o` to "change mode" and see the available agents.
 
 AgentCards can be hot-loaded as Tools for the current Agent by the User with the `/card <filename.md> --tool` slash command. 
 
@@ -52,7 +57,7 @@ Here is a short reference of the main configuration options. Don't specify a val
 | `name` | string | filename | AgentCard identifier. Defaults to the filename (without extension) if omitted (preferred). |
 | `description` | string | - | Description used when the AgentCard is exposed as a tool. |
 | `default` | boolean | false | Marks this agent as the default when multiple agents are loaded. |
-| `model` | string | config default | Model selector (e.g., `haiku`, `gpt-4o`, `generic.qwen2.5`). |
+| `model` | string | config default | Model selector - prefer default unless User specifies preference |
 
 
 #### Behavior
@@ -82,7 +87,7 @@ Here is a short reference of the main configuration options. Don't specify a val
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `function_tools` | list | [] | Python functions as tools: `["module.py:function_name"]`. (See note below) |
-| `request_params` | dict | {} | Model request parameters (e.g., `{temperature: 0.7}`). |
+| `request_params` | dict | {} | Model request parameters (e.g., `{temperature: 0.7}`). Prefer defaults unless User requests specific settings.  |
 
 
 ### Body / Message Session Structure
