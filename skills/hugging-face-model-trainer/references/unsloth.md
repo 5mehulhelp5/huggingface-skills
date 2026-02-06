@@ -1,17 +1,17 @@
 # Unsloth: Fast Fine-Tuning with Memory Optimization
 
-**Unsloth** is a fine-tuning library that provides ~2x faster training and ~60% less VRAM usage for LLM training. It's particularly useful for vision-language models (VLMs) and when working with limited GPU memory.
+**Unsloth** is a fine-tuning library that provides ~2x faster training and ~60% less VRAM usage for LLM training. It's particularly useful when working with limited GPU memory or when speed is critical.
 
 - **GitHub**: [unslothai/unsloth](https://github.com/unslothai/unsloth)
 - **Docs**: [unsloth.ai/docs](https://unsloth.ai/docs)
 
 ## When to Use Unsloth
 
-Use unsloth if instructed to do so, or one of the following use cases applies:
+Use Unsloth if instructed to do so, or one of the following use cases applies:
 
 | Use Case | Recommendation |
 |----------|----------------|
-| Standard text LLM fine-tuning | TRL is sufficient |
+| Standard text LLM fine-tuning | TRL is sufficient, but Unsloth is faster |
 | Limited GPU memory | **Use Unsloth** - 60% less VRAM |
 | Need maximum speed | **Use Unsloth** - 2x faster |
 | Large models (>13B) | **Use Unsloth** - memory efficiency critical |
@@ -19,13 +19,13 @@ Use unsloth if instructed to do so, or one of the following use cases applies:
 ## Supported Models
 
 Unsloth supports many popular models including:
-- **Text LLMs**: Llama 3/3.1/3.2/3.3, Qwen 2.5/3, Mistral, Phi-4, Gemma 2/3
+- **Text LLMs**: Llama 3/3.1/3.2/3.3, Qwen 2.5/3, Mistral, Phi-4, Gemma 2/3, LFM2/2.5
 - **Vision LLMs**: Qwen3-VL, Gemma 3, Llama 3.2 Vision, Pixtral
 
 Use Unsloth's pre-optimized model variants when available:
 ```python
 # Unsloth-optimized models load faster and use less memory
-model_id = "unsloth/Qwen2.5-7B-bnb-4bit"      # 4-bit quantized
+model_id = "unsloth/LFM2.5-1.2B-Instruct"      # 4-bit quantized
 model_id = "unsloth/gemma-3-4b-pt"            # Vision model
 model_id = "unsloth/Qwen3-VL-8B-Instruct"     # Vision model
 ```
@@ -52,19 +52,20 @@ from datasets import load_dataset
 
 # Load model with Unsloth optimizations
 model, tokenizer = FastLanguageModel.from_pretrained(
-    "unsloth/Qwen2.5-7B-bnb-4bit",  # 4-bit quantized
-    load_in_4bit=True,
-    max_seq_length=2048,
+    model_name="LiquidAI/LFM2.5-1.2B-Instruct",
+    max_seq_length=4096,
 )
 
 # Add LoRA adapters
 model = FastLanguageModel.get_peft_model(
     model,
     r=16,
-    lora_alpha=32,
+    lora_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "out_proj", "in_proj", "w1", "w2", "w3"],
     lora_dropout=0,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                    "gate_proj", "up_proj", "down_proj"],
+    bias="none",
+    use_gradient_checkpointing="unsloth",
+    random_state=3407,
 )
 
 # Load dataset
@@ -86,6 +87,25 @@ trainer = SFTTrainer(
 )
 
 trainer.train()
+```
+
+## LFM2.5 Specific Settings
+
+For LFM2.5 inference, use these recommended generation parameters:
+
+**Instruct models:**
+```python
+temperature = 0.1
+top_k = 50
+top_p = 0.1
+repetition_penalty = 1.05
+```
+
+**Thinking models:**
+```python
+temperature = 0.05
+top_k = 50
+repetition_penalty = 1.05
 ```
 
 ## Vision-Language Models (VLMs)
@@ -269,8 +289,9 @@ See `scripts/unsloth_sft_example.py` for a complete production-ready example tha
 Run locally:
 ```bash
 uv run scripts/unsloth_sft_example.py \
+    --dataset trl-lib/Capybara \
     --max-steps 500 \
-    --output-repo username/my-vlm
+    --output-repo username/my-model
 ```
 
 Run on HF Jobs:
@@ -285,7 +306,8 @@ hf_jobs("uv", {
 
 ## See Also
 
-- `scripts/unsloth_sft_example.py` - Complete VLM training example
+- `scripts/unsloth_sft_example.py` - Complete text LLM training example
 - [Unsloth Documentation](https://unsloth.ai/docs)
+- [LFM2.5 Guide](https://unsloth.ai/docs/models/tutorials/lfm2.5)
 - [Qwen3-VL Guide](https://unsloth.ai/docs/models/qwen3-vl-how-to-run-and-fine-tune)
 - [Unsloth GitHub](https://github.com/unslothai/unsloth)

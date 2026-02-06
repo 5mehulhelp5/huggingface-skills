@@ -39,12 +39,12 @@ Use this skill when users want to:
 ### When to Use Unsloth
 
 Use **Unsloth** (`references/unsloth.md`) instead of standard TRL when:
-- Training **Vision-Language Models (VLMs)** - Unsloth has better VLM support
 - **Limited GPU memory** - Unsloth uses ~60% less VRAM
 - **Speed matters** - Unsloth is ~2x faster
 - Training **large models (>13B)** - memory efficiency is critical
+- Training **Vision-Language Models (VLMs)** - Unsloth has `FastVisionModel` support
 
-See `references/unsloth.md` for complete Unsloth documentation and `scripts/unsloth_sft_example.py` for a production-ready VLM training script.
+See `references/unsloth.md` for complete Unsloth documentation and `scripts/unsloth_sft_example.py` for a production-ready training script.
 
 ## Key Directives
 
@@ -688,7 +688,7 @@ Add to PEP 723 header:
 - `scripts/train_sft_example.py` - Production SFT template
 - `scripts/train_dpo_example.py` - Production DPO template
 - `scripts/train_grpo_example.py` - Production GRPO template
-- `scripts/unsloth_sft_example.py` - Unsloth VLM training template (faster, less VRAM)
+- `scripts/unsloth_sft_example.py` - Unsloth text LLM training template (faster, less VRAM)
 - `scripts/estimate_cost.py` - Estimate time and cost (offer when appropriate)
 - `scripts/convert_to_gguf.py` - Complete GGUF conversion script
 

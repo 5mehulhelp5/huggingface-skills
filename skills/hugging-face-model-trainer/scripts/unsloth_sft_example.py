@@ -3,41 +3,39 @@
 # dependencies = [
 #     "unsloth",
 #     "datasets",
-#     "trl>=0.12.0",
+#     "trl==0.22.2",
 #     "huggingface_hub[hf_transfer]",
 #     "trackio",
+#     "tensorboard",
+#     "transformers==4.57.3",
 # ]
 # ///
 """
-Fine-tune Vision Language Models (VLMs) using Unsloth optimizations.
+Fine-tune LLMs using Unsloth optimizations for ~60% less VRAM and 2x faster training.
 
-Unsloth provides ~2x faster training and ~60% less VRAM usage.
-Supports streaming datasets - no disk space needed for large VLM datasets.
+Supports epoch-based or step-based training with optional eval split.
+Default model: LFM2.5-1.2B-Instruct (Liquid Foundation Model).
 
-USAGE:
+Epoch-based training (recommended for full datasets):
+    uv run unsloth_sft_example.py \
+        --dataset mlabonne/FineTome-100k \
+        --num-epochs 1 \
+        --eval-split 0.2 \
+        --output-repo your-username/model-finetuned
 
-  Run locally (requires GPU):
-    uv run unsloth_sft_example.py \\
-        --max-steps 100 \\
-        --output-repo username/vlm-test
+Run on HF Jobs (1 epoch with eval):
+    hf jobs uv run unsloth_sft_example.py \
+        --flavor a10g-small --secrets HF_TOKEN --timeout 4h \
+        -- --dataset mlabonne/FineTome-100k \
+           --num-epochs 1 \
+           --eval-split 0.2 \
+           --output-repo your-username/model-finetuned
 
-  Run on HF Jobs:
-    hf jobs uv run \\
-        https://huggingface.co/path/to/unsloth_sft_example.py \\
-        --flavor a10g-large --secrets HF_TOKEN \\
-        -- --max-steps 500 --output-repo username/vlm-finetuned
-
-  With Trackio monitoring:
-    uv run unsloth_sft_example.py \\
-        --max-steps 500 \\
-        --output-repo username/vlm-finetuned \\
-        --trackio-space username/trackio
-
-SUPPORTED MODELS:
-  - Vision: unsloth/gemma-3-4b-pt, unsloth/Qwen3-VL-8B-Instruct, etc.
-  - Text: unsloth/Qwen2.5-7B-bnb-4bit, unsloth/Llama-3.2-3B-bnb-4bit, etc.
-
-See: https://unsloth.ai/docs for full model list and documentation.
+Step-based training (for quick tests):
+    uv run unsloth_sft_example.py \
+        --dataset mlabonne/FineTome-100k \
+        --max-steps 500 \
+        --output-repo your-username/model-finetuned
 """
 
 import argparse
@@ -63,64 +61,71 @@ def check_cuda():
 
     if not torch.cuda.is_available():
         logger.error("CUDA is not available. This script requires a GPU.")
-        logger.error("Run on HF Jobs with --flavor a10g-large or similar.")
+        logger.error("Run on a machine with a CUDA-capable GPU or use HF Jobs:")
+        logger.error(
+            "  hf jobs uv run unsloth_sft_example.py --flavor a10g-small ..."
+        )
         sys.exit(1)
     logger.info(f"CUDA available: {torch.cuda.get_device_name(0)}")
-    logger.info(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Fine-tune VLMs with Unsloth optimizations",
+        description="Fine-tune LLMs with Unsloth optimizations",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Quick test run (local)
-  uv run unsloth_sft_example.py --max-steps 50 --output-repo username/test
-
-  # Full training with monitoring
+  # Quick test run
   uv run unsloth_sft_example.py \\
-      --max-steps 500 \\
-      --output-repo username/vlm-finetuned \\
+      --dataset mlabonne/FineTome-100k \\
+      --max-steps 50 \\
+      --output-repo username/model-test
+
+  # Full training with eval
+  uv run unsloth_sft_example.py \\
+      --dataset mlabonne/FineTome-100k \\
+      --num-epochs 1 \\
+      --eval-split 0.2 \\
+      --output-repo username/model-finetuned
+
+  # With Trackio monitoring
+  uv run unsloth_sft_example.py \\
+      --dataset mlabonne/FineTome-100k \\
+      --num-epochs 1 \\
+      --output-repo username/model-finetuned \\
       --trackio-space username/trackio
-
-  # Custom model and dataset
-  uv run unsloth_sft_example.py \\
-      --base-model unsloth/Qwen3-VL-8B-Instruct \\
-      --dataset your-username/your-vlm-dataset \\
-      --max-steps 1000 \\
-      --output-repo username/custom-vlm
         """,
     )
 
     # Model and data
     parser.add_argument(
         "--base-model",
-        default="unsloth/gemma-3-4b-pt",
-        help="Base VLM model. Use Unsloth variants for best performance. (default: unsloth/gemma-3-4b-pt)",
-    )
-    parser.add_argument(
-        "--chat-template",
-        default="gemma-3",
-        help="Chat template to apply. Options: gemma-3, qwen3-vl, llama-3, etc. (default: gemma-3)",
+        default="LiquidAI/LFM2.5-1.2B-Instruct",
+        help="Base model (default: LiquidAI/LFM2.5-1.2B-Instruct)",
     )
     parser.add_argument(
         "--dataset",
-        default="davanstrien/iconclass-vlm-sft",
-        help="VLM dataset with 'images' and 'messages' columns (default: davanstrien/iconclass-vlm-sft)",
+        required=True,
+        help="Dataset in ShareGPT/conversation format (e.g., mlabonne/FineTome-100k)",
     )
     parser.add_argument(
         "--output-repo",
         required=True,
-        help="HF Hub repo to push model to (e.g., 'username/vlm-finetuned')",
+        help="HF Hub repo to push model to (e.g., 'username/model-finetuned')",
     )
 
     # Training config
     parser.add_argument(
+        "--num-epochs",
+        type=float,
+        default=None,
+        help="Number of epochs (default: None). Use instead of --max-steps.",
+    )
+    parser.add_argument(
         "--max-steps",
         type=int,
-        default=500,
-        help="Training steps (default: 500). Required for streaming datasets.",
+        default=None,
+        help="Training steps (default: None). Use for quick tests or streaming.",
     )
     parser.add_argument(
         "--batch-size",
@@ -157,25 +162,51 @@ Examples:
     parser.add_argument(
         "--lora-alpha",
         type=int,
-        default=32,
-        help="LoRA alpha (default: 32). Usually 2*r",
+        default=16,
+        help="LoRA alpha (default: 16). Same as r per Unsloth recommendation",
     )
 
-    # Logging and output
+    # Logging
     parser.add_argument(
         "--trackio-space",
         default=None,
         help="HF Space for Trackio dashboard (e.g., 'username/trackio')",
     )
     parser.add_argument(
-        "--save-local",
-        default="unsloth-vlm-output",
-        help="Local directory to save model (default: unsloth-vlm-output)",
+        "--run-name",
+        default=None,
+        help="Custom run name for Trackio (default: auto-generated)",
     )
     parser.add_argument(
-        "--no-streaming",
+        "--save-local",
+        default="unsloth-output",
+        help="Local directory to save model (default: unsloth-output)",
+    )
+
+    # Evaluation and data control
+    parser.add_argument(
+        "--eval-split",
+        type=float,
+        default=0.0,
+        help="Fraction of data for evaluation (0.0-0.5). Default: 0.0 (no eval)",
+    )
+    parser.add_argument(
+        "--num-samples",
+        type=int,
+        default=None,
+        help="Limit samples (default: None = use all)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=3407,
+        help="Random seed for reproducibility (default: 3407)",
+    )
+    parser.add_argument(
+        "--merge-model",
         action="store_true",
-        help="Disable dataset streaming (downloads full dataset)",
+        default=False,
+        help="Merge LoRA weights into base model before uploading (larger file, easier to use)",
     )
 
     return parser.parse_args()
@@ -184,23 +215,33 @@ Examples:
 def main():
     args = parse_args()
 
+    # Validate epochs/steps configuration
+    if not args.num_epochs and not args.max_steps:
+        args.num_epochs = 1
+        logger.info("Using default --num-epochs=1")
+
+    # Determine training duration display
+    if args.num_epochs:
+        duration_str = f"{args.num_epochs} epoch(s)"
+    else:
+        duration_str = f"{args.max_steps} steps"
+
     print("=" * 70)
-    print("Unsloth VLM Fine-tuning")
+    print("LLM Fine-tuning with Unsloth")
     print("=" * 70)
     print("\nConfiguration:")
     print(f"  Base model:      {args.base_model}")
-    print(f"  Chat template:   {args.chat_template}")
     print(f"  Dataset:         {args.dataset}")
-    print(f"  Max steps:       {args.max_steps}")
-    print(
-        f"  Batch size:      {args.batch_size} x {args.gradient_accumulation} "
-        f"= {args.batch_size * args.gradient_accumulation} effective"
-    )
+    print(f"  Num samples:     {args.num_samples or 'all'}")
+    print(f"  Eval split:      {args.eval_split if args.eval_split > 0 else '(disabled)'}")
+    print(f"  Seed:            {args.seed}")
+    print(f"  Training:        {duration_str}")
+    print(f"  Batch size:      {args.batch_size} x {args.gradient_accumulation} = {args.batch_size * args.gradient_accumulation}")
     print(f"  Learning rate:   {args.learning_rate}")
     print(f"  LoRA rank:       {args.lora_r}")
+    print(f"  Max seq length:  {args.max_seq_length}")
     print(f"  Output repo:     {args.output_repo}")
     print(f"  Trackio space:   {args.trackio_space or '(not configured)'}")
-    print(f"  Streaming:       {not args.no_streaming}")
     print()
 
     # Check CUDA before heavy imports
@@ -209,203 +250,261 @@ def main():
     # Enable fast transfers
     os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
+    # Set Trackio space if provided
+    if args.trackio_space:
+        os.environ["TRACKIO_SPACE_ID"] = args.trackio_space
+        logger.info(f"Trackio dashboard: https://huggingface.co/spaces/{args.trackio_space}")
+
     # Import heavy dependencies
-    from unsloth import FastVisionModel, get_chat_template
-    from unsloth.trainer import UnslothVisionDataCollator
+    from unsloth import FastLanguageModel
+    from unsloth.chat_templates import standardize_data_formats, train_on_responses_only
     from datasets import load_dataset
     from trl import SFTTrainer, SFTConfig
     from huggingface_hub import login
-    import trackio
 
     # Login to Hub
-    token = os.environ.get("HF_TOKEN")
+    token = os.environ.get("HF_TOKEN") or os.environ.get("hfjob")
     if token:
         login(token=token)
         logger.info("Logged in to Hugging Face Hub")
     else:
         logger.warning("HF_TOKEN not set - model upload may fail")
 
-    # Initialize Trackio if configured
-    if args.trackio_space:
-        trackio.init(
-            project="unsloth-vlm-training",
-            name=f"{args.base_model.split('/')[-1]}-{args.max_steps}steps",
-            space_id=args.trackio_space,
-            config={
-                "model": args.base_model,
-                "dataset": args.dataset,
-                "max_steps": args.max_steps,
-                "learning_rate": args.learning_rate,
-                "lora_r": args.lora_r,
-                "batch_size": args.batch_size,
-                "gradient_accumulation": args.gradient_accumulation,
-            },
-        )
-        logger.info(f"Trackio dashboard: https://huggingface.co/spaces/{args.trackio_space}")
-
     # 1. Load model
-    print("\n[1/5] Loading model with Unsloth optimizations...")
+    print("\n[1/5] Loading model...")
     start = time.time()
 
-    model, processor = FastVisionModel.from_pretrained(
-        args.base_model,
-        load_in_4bit=True,
-        use_gradient_checkpointing="unsloth",
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=args.base_model,
+        max_seq_length=args.max_seq_length,
+        load_in_4bit=False,
+        load_in_8bit=False,
+        load_in_16bit=True,
+        full_finetuning=False,
     )
 
-    # Add LoRA adapters for all modalities
-    model = FastVisionModel.get_peft_model(
+    # Add LoRA adapters
+    model = FastLanguageModel.get_peft_model(
         model,
-        finetune_vision_layers=True,
-        finetune_language_layers=True,
-        finetune_attention_modules=True,
-        finetune_mlp_modules=True,
         r=args.lora_r,
+        target_modules=["q_proj", "k_proj", "v_proj", "out_proj", "in_proj", "w1", "w2", "w3"],
         lora_alpha=args.lora_alpha,
         lora_dropout=0,
         bias="none",
-        random_state=3407,
+        use_gradient_checkpointing="unsloth",
+        random_state=args.seed,
         use_rslora=False,
         loftq_config=None,
-        target_modules="all-linear",
     )
-
-    # Apply chat template
-    processor = get_chat_template(processor, args.chat_template)
     print(f"Model loaded in {time.time() - start:.1f}s")
 
-    # 2. Load dataset
+    # 2. Load and prepare dataset
     print("\n[2/5] Loading dataset...")
     start = time.time()
 
-    streaming = not args.no_streaming
-    dataset = load_dataset(
-        args.dataset,
-        split="train",
-        streaming=streaming,
-    )
+    dataset = load_dataset(args.dataset, split="train")
+    print(f"  Dataset has {len(dataset)} total samples")
 
-    if streaming:
-        # Peek at first sample to show info
-        sample = next(iter(dataset))
-        print(f"Streaming dataset ready in {time.time() - start:.1f}s")
-        if "messages" in sample:
-            print(f"  Sample has {len(sample['messages'])} messages")
-        if "images" in sample:
-            img_count = len(sample["images"]) if isinstance(sample["images"], list) else 1
-            print(f"  Sample has {img_count} image(s)")
+    if args.num_samples:
+        dataset = dataset.select(range(min(args.num_samples, len(dataset))))
+        print(f"  Limited to {len(dataset)} samples")
 
-        # Reload dataset (consumed one sample above)
-        dataset = load_dataset(args.dataset, split="train", streaming=True)
+    # Auto-detect and normalize conversation column
+    for col in ["messages", "conversations", "conversation"]:
+        if col in dataset.column_names and isinstance(dataset[0][col], list):
+            if col != "conversations":
+                dataset = dataset.rename_column(col, "conversations")
+            break
+    dataset = standardize_data_formats(dataset)
+
+    # Apply chat template
+    def formatting_prompts_func(examples):
+        texts = tokenizer.apply_chat_template(
+            examples["conversations"],
+            tokenize=False,
+            add_generation_prompt=False,
+        )
+        # Remove BOS token to avoid duplicates
+        return {"text": [x.removeprefix(tokenizer.bos_token) for x in texts]}
+
+    dataset = dataset.map(formatting_prompts_func, batched=True)
+
+    # Split for evaluation if requested
+    if args.eval_split > 0:
+        split = dataset.train_test_split(test_size=args.eval_split, seed=args.seed)
+        train_data = split["train"]
+        eval_data = split["test"]
+        print(f"  Train: {len(train_data)} samples, Eval: {len(eval_data)} samples")
     else:
-        print(f"Dataset loaded in {time.time() - start:.1f}s")
-        print(f"  {len(dataset)} examples")
+        train_data = dataset
+        eval_data = None
+
+    print(f"  Dataset ready in {time.time() - start:.1f}s")
 
     # 3. Configure trainer
     print("\n[3/5] Configuring trainer...")
 
-    # Enable training mode
-    FastVisionModel.for_training(model)
+    # Calculate steps per epoch for logging/eval intervals
+    effective_batch = args.batch_size * args.gradient_accumulation
+    num_samples = len(train_data)
+    steps_per_epoch = num_samples // effective_batch
+
+    # Determine run name and logging steps
+    if args.run_name:
+        run_name = args.run_name
+    elif args.num_epochs:
+        run_name = f"unsloth-sft-{args.num_epochs}ep"
+    else:
+        run_name = f"unsloth-sft-{args.max_steps}steps"
+
+    if args.num_epochs:
+        logging_steps = max(1, steps_per_epoch // 10)
+        save_steps = max(1, steps_per_epoch // 4)
+    else:
+        logging_steps = max(1, args.max_steps // 20)
+        save_steps = max(1, args.max_steps // 4)
+
+    # Determine reporting backend
+    if args.trackio_space:
+        report_to = ["tensorboard", "trackio"]
+    else:
+        report_to = ["tensorboard"]
 
     training_config = SFTConfig(
         output_dir=args.save_local,
+        dataset_text_field="text",
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.gradient_accumulation,
-        gradient_checkpointing=True,
-        gradient_checkpointing_kwargs={"use_reentrant": False},
-        max_grad_norm=0.3,
-        warmup_ratio=0.03,
-        max_steps=args.max_steps,
+        warmup_steps=5,
+        num_train_epochs=args.num_epochs if args.num_epochs else 1,
+        max_steps=args.max_steps if args.max_steps else -1,
         learning_rate=args.learning_rate,
-        logging_steps=max(1, args.max_steps // 20),
-        save_strategy="steps",
-        save_steps=max(100, args.max_steps // 5),
-        optim="adamw_torch_fused",
-        weight_decay=0.001,
-        lr_scheduler_type="cosine",
-        seed=3407,
-        # VLM-specific settings (required for Unsloth)
-        remove_unused_columns=False,
-        dataset_text_field="",
-        dataset_kwargs={"skip_prepare_dataset": True},
+        logging_steps=logging_steps,
+        optim="adamw_8bit",
+        weight_decay=0.01,
+        lr_scheduler_type="linear",
+        seed=args.seed,
         max_length=args.max_seq_length,
-        # Hub settings
+        report_to=report_to,
+        run_name=run_name,
         push_to_hub=True,
         hub_model_id=args.output_repo,
-        hub_strategy="checkpoint",
-        # Logging
-        report_to="trackio" if args.trackio_space else "none",
-        run_name=f"unsloth-vlm-{args.max_steps}steps",
+        save_steps=save_steps,
+        save_total_limit=3,
     )
+
+    # Add evaluation config if eval is enabled
+    if eval_data:
+        if args.num_epochs:
+            training_config.eval_strategy = "epoch"
+            print("  Evaluation enabled: every epoch")
+        else:
+            training_config.eval_strategy = "steps"
+            training_config.eval_steps = max(1, args.max_steps // 5)
+            print(f"  Evaluation enabled: every {training_config.eval_steps} steps")
 
     trainer = SFTTrainer(
         model=model,
-        train_dataset=dataset,
-        processing_class=processor.tokenizer,
-        data_collator=UnslothVisionDataCollator(model, processor),
+        tokenizer=tokenizer,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
         args=training_config,
     )
 
+    # Train on responses only (mask user inputs)
+    trainer = train_on_responses_only(
+        trainer,
+        instruction_part="<|im_start|>user\n",
+        response_part="<|im_start|>assistant\n",
+    )
+
     # 4. Train
-    print(f"\n[4/5] Training for {args.max_steps} steps...")
-    print(f"  Logging every {training_config.logging_steps} steps")
-    print(f"  Saving every {training_config.save_steps} steps")
+    print(f"\n[4/5] Training for {duration_str}...")
+    if args.num_epochs:
+        print(f"  (~{steps_per_epoch} steps/epoch, {int(steps_per_epoch * args.num_epochs)} total steps)")
     start = time.time()
 
-    trainer.train()
+    train_result = trainer.train()
 
     train_time = time.time() - start
+    total_steps = train_result.metrics.get("train_steps", args.max_steps or steps_per_epoch * args.num_epochs)
     print(f"\nTraining completed in {train_time / 60:.1f} minutes")
-    print(f"  Speed: {args.max_steps / train_time:.2f} steps/s")
+    print(f"  Speed: {total_steps / train_time:.2f} steps/s")
+
+    # Print training metrics
+    train_loss = train_result.metrics.get("train_loss")
+    if train_loss:
+        print(f"  Final train loss: {train_loss:.4f}")
+
+    # Print eval results if eval was enabled
+    if eval_data:
+        print("\nRunning final evaluation...")
+        try:
+            eval_results = trainer.evaluate()
+            eval_loss = eval_results.get("eval_loss")
+            if eval_loss:
+                print(f"  Final eval loss: {eval_loss:.4f}")
+                if train_loss:
+                    ratio = eval_loss / train_loss
+                    if ratio > 1.5:
+                        print(f"  Warning: Eval loss is {ratio:.1f}x train loss - possible overfitting")
+                    else:
+                        print(f"  Eval/train ratio: {ratio:.2f} - model generalizes well")
+        except Exception as e:
+            print(f"  Warning: Final evaluation failed: {e}")
+            print("  Continuing to save model...")
 
     # 5. Save and push
     print("\n[5/5] Saving model...")
 
-    # Save locally
-    model.save_pretrained(args.save_local)
-    processor.save_pretrained(args.save_local)
-    print(f"Saved locally to {args.save_local}/")
+    if args.merge_model:
+        print("Merging LoRA weights into base model...")
+        print(f"\nPushing merged model to {args.output_repo}...")
+        model.push_to_hub_merged(
+            args.output_repo,
+            tokenizer=tokenizer,
+            save_method="merged_16bit",
+        )
+        print(f"Merged model available at: https://huggingface.co/{args.output_repo}")
+    else:
+        model.save_pretrained(args.save_local)
+        tokenizer.save_pretrained(args.save_local)
+        print(f"Saved locally to {args.save_local}/")
 
-    # Push to Hub
-    print(f"\nPushing to {args.output_repo}...")
-    model.push_to_hub(args.output_repo)
-    processor.push_to_hub(args.output_repo)
-    print(f"Model available at: https://huggingface.co/{args.output_repo}")
-
-    # Finish Trackio
-    if args.trackio_space:
-        trackio.finish()
+        print(f"\nPushing adapter to {args.output_repo}...")
+        model.push_to_hub(args.output_repo, tokenizer=tokenizer)
+        print(f"Adapter available at: https://huggingface.co/{args.output_repo}")
 
     print("\n" + "=" * 70)
     print("Done!")
     print("=" * 70)
-    print(f"\nModel: https://huggingface.co/{args.output_repo}")
-    if args.trackio_space:
-        print(f"Metrics: https://huggingface.co/spaces/{args.trackio_space}")
 
 
 if __name__ == "__main__":
-    # Show help if no arguments
     if len(sys.argv) == 1:
         print("=" * 70)
-        print("Unsloth VLM Fine-tuning")
+        print("LLM Fine-tuning with Unsloth")
         print("=" * 70)
-        print("\nFine-tune Vision-Language Models with Unsloth optimizations.")
-        print("~2x faster training and ~60% less VRAM vs standard methods.")
+        print("\nFine-tune language models with optional train/eval split.")
         print("\nFeatures:")
-        print("  - Streaming datasets (no disk space needed)")
-        print("  - 4-bit quantization for memory efficiency")
-        print("  - LoRA for all modalities (vision + language)")
-        print("  - Trackio integration for monitoring")
-        print("  - Automatic Hub push")
-        print("\nQuick start:")
+        print("  - ~60% less VRAM with Unsloth optimizations")
+        print("  - 2x faster training vs standard methods")
+        print("  - Epoch-based or step-based training")
+        print("  - Optional evaluation to detect overfitting")
+        print("  - Trains only on assistant responses (masked user inputs)")
+        print("\nEpoch-based training:")
         print("\n  uv run unsloth_sft_example.py \\")
-        print("      --max-steps 500 \\")
-        print("      --output-repo your-username/vlm-finetuned")
-        print("\nHF Jobs (cloud GPU):")
-        print("\n  hf jobs uv run <script-url> \\")
-        print("      --flavor a10g-large --secrets HF_TOKEN \\")
-        print("      -- --max-steps 500 --output-repo your-username/vlm-finetuned")
+        print("      --dataset mlabonne/FineTome-100k \\")
+        print("      --num-epochs 1 \\")
+        print("      --eval-split 0.2 \\")
+        print("      --output-repo your-username/model-finetuned")
+        print("\nHF Jobs example:")
+        print("\n  hf jobs uv run unsloth_sft_example.py \\")
+        print("      --flavor a10g-small --secrets HF_TOKEN --timeout 4h \\")
+        print("      -- --dataset mlabonne/FineTome-100k \\")
+        print("         --num-epochs 1 \\")
+        print("         --eval-split 0.2 \\")
+        print("         --output-repo your-username/model-finetuned")
         print("\nFor full help: uv run unsloth_sft_example.py --help")
         print("=" * 70)
         sys.exit(0)
