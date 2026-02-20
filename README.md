@@ -16,7 +16,7 @@ In practice, skills are self-contained folders that package instructions, script
 
 ## Installation
 
-Hugging Face skills are compatible with Claude Code, Codex, and Gemini CLI. With integrations Cursor, Windsurf, and Continue, on the way.
+Hugging Face skills are compatible with Claude Code, Codex, Gemini CLI, and Cursor.
 
 ### Claude Code
 
@@ -66,6 +66,21 @@ gemini extensions install https://github.com/huggingface/skills.git --consent
 
 4. See [Gemini CLI extensions docs](https://geminicli.com/docs/extensions/#installing-an-extension) for more help.
 
+### Cursor
+
+This repository includes Cursor plugin manifests:
+
+- `.cursor-plugin/plugin.json`
+- `.mcp.json` (configured with the Hugging Face MCP server URL)
+
+Install from repository URL (or local checkout) via the Cursor plugin flow.
+
+For contributors, regenerate manifests with:
+
+```bash
+./scripts/publish.sh
+```
+
 ## Skills
 
 This repository contains a few skills to get you started. You can also contribute your own skills to the repository.
@@ -112,7 +127,11 @@ Your coding agent automatically loads the corresponding `SKILL.md` instructions 
    ```
 3. Add or edit supporting scripts, templates, and documents referenced by your instructions.
 4. Add an entry to `.claude-plugin/marketplace.json` with a concise, human-readable description.
-5. Run `python scripts/generate_agents.py` to validate the structure.
+5. Run:
+   ```bash
+   ./scripts/publish.sh
+   ```
+   to regenerate and validate all generated metadata.
 6. Reinstall or reload the skill bundle in your coding agent so the updated folder is available.
 
 ### Marketplace
